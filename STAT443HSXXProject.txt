@@ -1,0 +1,79 @@
+#STAT 443 Project
+#Xinyu Huang - 20615673
+#Bozhao Shi - 20653471
+#Lingli Xu - 20600103
+#Zihan Xu - 20610709
+
+#R code
+
+#Define the number of simulation
+N.sim <- 10000
+
+#Create a user-defined function called ar_simulator
+#which takes the number of observations (obs) and estimation method (mthd) as inputs
+#obs should be a positive integer and mthd should be one of "CSS", "ML", "CSS-ML"
+ar_simulator <- function(obs,mthd){
+  #Construct results as a list
+  result=rep(1,N.sim)
+  #Repeat process for N.sim times
+  for (i in 1:N.sim){
+    #Generate data from model with given number of observations
+    data=arima.sim(model=list(ar=c(0.5,0.3)),n=obs+1,sd=sqrt(4))
+    #Generate training data and data to be forecast 
+    train_data=data[1:obs]
+    fore_data=data[obs+1]
+    #Fit an AR(2) model (with no intercept)
+    fit=arima(train_data,order=c(2,0,0),include.mean=F,method=mthd)
+    #Obtain the estimate for the data to be forecast
+    estimate=predict(fit,n.ahead=1)
+    #Contrsuct 95% CI
+    upper=estimate$pred+qnorm(0.975)*estimate$se
+    lower=estimate$pred-qnorm(0.975)*estimate$se
+    #Check if 95% CI contains the realised value
+    result[i]=(lower<=fore_data)&(fore_data<=upper)
+  }
+  #Estimate for proportion
+  return (mean(result))
+}
+
+#Create a function to produce M-C standard error with given alpha
+mc_error <- function(alpha){
+  se=sqrt(alpha*(1-alpha)/N.sim)
+  return (se)
+}
+
+#Case 1
+#Use simulator to estimate proportion with 200 observations
+alpha1.hat=ar_simulator(200,"CSS-ML")
+alpha1.hat
+#Calculator M-C standard error
+mc_error(alpha1.hat)
+
+#Case 2
+#Use simulator to estimate proportion with 20 observations
+alpha2.hat=ar_simulator(20,"CSS")
+alpha2.hat
+#Calculate M-C standard error
+mc_error(alpha2.hat)
+
+#An example simulation of Case1
+ex1=arima.sim(model=list(ar=c(0.5,0.3)),n=201,sd=sqrt(4))
+#Construct a plot for the first sample
+plot(ex1,main="case 1")
+#Generate training data and data to be forecasted
+train_data1=ex1[1:200]
+fore_data1=ex1[201]
+#fit an AR(2) model with no intercept
+f1=arima(train_data1,order=c(2,0,0),include.mean=F)
+f1
+
+#An example simulation of Case2
+ex2=arima.sim(model=list(ar=c(0.5,0.3)),n=21,sd=sqrt(4))
+#Construct a plot for the second sample
+plot(ex2,main="case 2")
+#Generate training data and data to be forecasted
+train_data2=ex2[1:20]
+fore_data2=ex2[21]
+#fit an AR(2) model with no intercept
+f2=arima(train_data2,order=c(2,0,0),include.mean=F,method="CSS")
+f2
